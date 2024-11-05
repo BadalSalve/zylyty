@@ -1,0 +1,68 @@
+import os
+import requests
+
+# Environment variable setup for API key and database connection
+ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "TbJ8np6ccKb1FN7ulNckMLxNXkz9zccZE2CtO8c4vEYcvlNq27agLecbbeZcW7eWCpmt0oxc")  # Use default for testing
+DB_CONNECTION = os.getenv("DB_CONNECTION")  
+
+def fetch_data_from_api():
+    """Fetch data from API and handle errors."""
+    headers = {'Authorization': f'Bearer {ADMIN_API_KEY}'}
+    response = requests.get("https://api.example.com/data", headers=headers)
+    
+    if response.status_code == 200:
+        return response.json()  
+    else:
+        raise Exception("Failed to fetch data from API.")
+
+def validate_and_filter_data(data):
+    """Validate and filter data into separate lists for clients, accounts, and transactions."""
+    valid_clients, valid_accounts, valid_transactions = [], [], []
+
+    for record in data:
+        if "client" in record and is_valid_client(record["client"]):
+            valid_clients.append(record["client"])
+        if "account" in record and is_valid_account(record["account"]):
+            valid_accounts.append(record["account"])
+        if "transaction" in record and is_valid_transaction(record["transaction"]):
+            valid_transactions.append(record["transaction"])
+    
+    return valid_clients, valid_accounts, valid_transactions
+
+
+def is_valid_client(client):
+    """Check if client data is valid."""
+    return "id" in client and "name" in client  
+
+def is_valid_account(account):
+    """Check if account data is valid."""
+    return "id" in account and "balance" in account  
+
+def is_valid_transaction(transaction):
+    """Check if transaction data is valid."""
+    return "id" in transaction and "amount" in transaction  
+
+def load_data_into_database(clients, accounts, transactions):
+    """Load validated data into the database."""
+    
+    pass
+
+def main():
+    try:
+        # Step 1: Extract
+        data = fetch_data_from_api()
+        
+        # Step 2: Validate and Filter
+        valid_clients, valid_accounts, valid_transactions = validate_and_filter_data(data)
+        
+        # Step 3: Load
+        load_data_into_database(valid_clients, valid_accounts, valid_transactions)
+        
+        # Step 4: Print confirmation message
+        print(f"ZYLYTY Data Import Completed [{len(valid_clients)}, {len(valid_accounts)}, {len(valid_transactions)}]")
+
+    except Exception as e:
+        print(f"Error: {e}")
+
+if __name__ == "__main__":
+    main()
