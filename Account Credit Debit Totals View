@@ -1,0 +1,18 @@
+CREATE VIEW account_credit_debit_totals AS
+SELECT 
+    a.account_id,
+    a.client_id,
+    COALESCE(SUM(CASE WHEN t.type = true THEN t.amount ELSE 0 END), 0) AS total_credited,
+    COALESCE(SUM(CASE WHEN t.type = false THEN t.amount ELSE 0 END), 0) AS total_debited
+FROM 
+    accounts a
+JOIN 
+    clients c ON a.client_id = c.client_id
+JOIN 
+    transactions t ON a.account_id = t.account_id
+WHERE 
+    c.client_email LIKE '%.net'
+GROUP BY 
+    a.account_id, a.client_id
+ORDER BY 
+    a.account_id, a.client_id;
