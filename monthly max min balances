@@ -1,0 +1,33 @@
+CREATE VIEW monthly_max_min_balances AS
+WITH balance_updates AS (
+    SELECT 
+        DATE_TRUNC('month', t.timestamp) AS month,
+        t.account_id,
+        t.timestamp,
+        CASE 
+            WHEN t.type = true THEN t.amount
+            ELSE -t.amount
+        END AS balance_change
+    FROM 
+        transactions t
+),
+cumulative_balances AS (
+    SELECT
+        month,
+        account_id,
+        timestamp,
+        SUM(balance_change) OVER (PARTITION BY account_id, month ORDER BY timestamp) AS balance
+    FROM 
+        balance_updates
+)
+SELECT 
+    month,
+    account_id,
+    MAX(balance) AS max_balance,
+    MIN(balance) AS min_balance
+FROM 
+    cumulative_balances
+GROUP BY 
+    month, account_id
+ORDER BY 
+    month, account_id;
