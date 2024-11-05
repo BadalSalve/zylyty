@@ -1,9 +1,10 @@
 import os
 import requests
+import psycopg2  
 
-# Environment variable setup for API key and database connection
-ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "TbJ8np6ccKb1FN7ulNckMLxNXkz9zccZE2CtO8c4vEYcvlNq27agLecbbeZcW7eWCpmt0oxc")  # Use default for testing
-DB_CONNECTION = os.getenv("DB_CONNECTION")  
+# Environment variables for API key and database connection
+ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "TbJ8np6ccKb1FN7ulNckMLxNXkz9zccZE2CtO8c4vEYcvlNq27agLecbbeZcW7eWCpmt0oxc")  
+DB_CONNECTION = os.getenv("DB_CONNECTION")  # This would need to be properly configured
 
 def fetch_data_from_api():
     """Fetch data from API and handle errors."""
@@ -11,58 +12,67 @@ def fetch_data_from_api():
     response = requests.get("https://api.example.com/data", headers=headers)
     
     if response.status_code == 200:
-        data = response.json()
-        print(f"Fetched {len(data)} records from API")  # Debugging: print fetched data count
-        return data
+        return response.json()  
     else:
         raise Exception("Failed to fetch data from API.")
+
+def is_valid_client(client):
+    """Check if client data is valid."""
+    return "id" in client and "name" in client and "email" in client
+
+def is_valid_account(account):
+    """Check if account data is valid."""
+    return "id" in account and "client_id" in account and "balance" in account
+
+def is_valid_transaction(transaction):
+    """Check if transaction data is valid."""
+    return "id" in transaction and "amount" in transaction and "account_id" in transaction
 
 def validate_and_filter_data(data):
     """Validate and filter data into separate lists for clients, accounts, and transactions."""
     valid_clients, valid_accounts, valid_transactions = [], [], []
 
     for record in data:
-        # Check and print record for debugging
-        print(f"Processing record: {record}")
-        
-        # Validate and filter clients
         if "client" in record and is_valid_client(record["client"]):
             valid_clients.append(record["client"])
-        else:
-            print("Invalid client data found")  # Debugging: invalid client
-
-        # Validate and filter accounts
         if "account" in record and is_valid_account(record["account"]):
             valid_accounts.append(record["account"])
-        else:
-            print("Invalid account data found")  # Debugging: invalid account
-
-        # Validate and filter transactions
         if "transaction" in record and is_valid_transaction(record["transaction"]):
             valid_transactions.append(record["transaction"])
-        else:
-            print("Invalid transaction data found")  # Debugging: invalid transaction
     
-    # Debugging: print counts of valid items
-    print(f"Valid Clients: {len(valid_clients)}, Valid Accounts: {len(valid_accounts)}, Valid Transactions: {len(valid_transactions)}")
     return valid_clients, valid_accounts, valid_transactions
-
-def is_valid_client(client):
-    """Check if client data is valid."""
-    return client.get("id") and client.get("name")
-
-def is_valid_account(account):
-    """Check if account data is valid."""
-    return account.get("id") and account.get("balance") is not None
-
-def is_valid_transaction(transaction):
-    """Check if transaction data is valid."""
-    return transaction.get("id") and transaction.get("amount") is not None
 
 def load_data_into_database(clients, accounts, transactions):
     """Load validated data into the database."""
-    # Database load code goes here
-    pass
+    conn = psycopg2.connect(DB_CONNECTION)
+    cur = conn.cursor()
+
+    try:
+        for client in clients:
+            cur.execute(
+                "INSERT INTO clients (id, name, email) VALUES (%s, %s, %s)",
+                (client['id'], client['name'], client['email'])
+            )
+
+        for account in accounts:
+            cur.execute(
+                "INSERT INTO accounts (id, client_id, balance) VALUES (%s, %s, %s)",
+                (account['id'], account['client_id'], account['balance'])
+            )
+
+        for transaction in transactions:
+            cur.execute(
+                "INSERT INTO transactions (id, account_id, amount) VALUES (%s, %s, %s)",
+                (transaction['id'], transaction['account_id'], transaction['amount'])
+            )
+
+        conn.commit()
+
+    except Exception as e:
+        print(f"Database error: {e}")
+    finally:
+        cur.close()
+        conn.close()
 
 def main():
     try:
