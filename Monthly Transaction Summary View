@@ -1,0 +1,16 @@
+CREATE VIEW monthly_transaction_summary AS
+SELECT 
+    DATE_TRUNC('month', t.timestamp) AS month,
+    c.client_email,
+    COUNT(t.transaction_id) AS transaction_count,
+    SUM(ABS(t.amount)) AS total_amount
+FROM 
+    transactions t
+JOIN 
+    accounts a ON t.account_id = a.account_id
+JOIN 
+    clients c ON a.client_id = c.client_id
+GROUP BY 
+    month, c.client_email
+ORDER BY 
+    month, c.client_email;
